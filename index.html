@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AD Business Portal</title>
+
+  <!-- Qlik Embed scripts — apuntan a tu tenant -->
+  <script crossorigin="anonymous" type="application/javascript"
+    src="https://n2co.us.qlikcloud.com/resources/assets/external/requirejs/require.js"></script>
+  <script crossorigin="anonymous" type="module"
+    src="https://n2co.us.qlikcloud.com/embed/qlik-embed/qlik-embed.es.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #1a2e4a;
+      --navy-light: #243d5e;
+      --accent:     #2e7fc1;
+      --accent-dim: #1a5a8a;
+      --text-main:  #f0f4f8;
+      --text-muted: #8ba3bc;
+      --border:     rgba(255,255,255,0.08);
+      --sidebar-w:  240px;
+      --header-h:   56px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1e30;
+      color: var(--text-main);
+      overflow: hidden;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-h);
+      background: var(--navy);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 100;
+      gap: 16px;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .header-logo svg {
+      width: 28px; height: 28px;
+      fill: var(--accent);
+    }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-main);
+      letter-spacing: 0.02em;
+    }
+
+    .header-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .header-spacer { flex: 1; }
+
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #c8dff0;
+    }
+
+    /* ── DOWNLOAD BUTTON ── */
+    .btn-download {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      text-decoration: none;
+    }
+
+    .btn-download:hover  { background: #2570ac; }
+    .btn-download:active { transform: scale(0.97); }
+
+    .btn-download svg {
+      width: 15px; height: 15px;
+      stroke: #fff;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .btn-download.loading {
+      background: var(--accent-dim);
+      pointer-events: none;
+    }
+
+    .spinner {
+      display: none;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .btn-download.loading .spinner { display: block; }
+    .btn-download.loading .dl-icon { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: flex;
+      height: 100vh;
+      padding-top: var(--header-h);
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--navy);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px 0 24px;
+    }
+
+    .nav-section {
+      padding: 0 12px;
+      margin-bottom: 4px;
+    }
+
+    .nav-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 12px 8px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: 7px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      transition: background 0.12s, color 0.12s;
+      position: relative;
+    }
+
+    .nav-item:hover {
+      background: rgba(255,255,255,0.06);
+      color: var(--text-main);
+    }
+
+    .nav-item.active {
+      background: rgba(46,127,193,0.18);
+      color: #7ec4f0;
+    }
+
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 20%; bottom: 20%;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--accent);
+    }
+
+    .nav-item svg {
+      width: 16px; height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      font-size: 10px;
+      background: rgba(46,127,193,0.3);
+      color: #7ec4f0;
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .sheet-panel {
+      display: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    .sheet-panel.active {
+      display: block;
+    }
+
+    qlik-embed {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── TOAST NOTIFICATION ── */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: #1e3a52;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+      z-index: 200;
+      max-width: 320px;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast svg {
+      width: 18px; height: 18px;
+      stroke: #4caf92;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .toast.error svg { stroke: #e57373; }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header class="header">
+  <div class="header-logo">
+    <!-- N2 logo placeholder -->
+    <svg viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+      <rect width="28" height="28" rx="6" fill="#1a5a8a"/>
+      <text x="14" y="20" text-anchor="middle" font-size="14" font-weight="700"
+        font-family="Segoe UI,sans-serif" fill="#7ec4f0">N2</text>
+    </svg>
+    <div>
+      <div class="header-title">AD Business Portal</div>
+      <div class="header-subtitle">Area Director Dashboard</div>
+    </div>
+  </div>
+
+  <div class="header-spacer"></div>
+
+  <!-- Download button -->
+  <button class="btn-download" id="btnDownload" onclick="triggerDownload()">
+    <svg class="dl-icon" viewBox="0 0 24 24">
+      <path d="M12 3v13M7 11l5 5 5-5M3 19h18"/>
+    </svg>
+    <div class="spinner"></div>
+    Get my report
+  </button>
+
+  <div class="header-user">
+    <div class="avatar" id="userAvatar">AD</div>
+    <span id="userName">Area Director</span>
+  </div>
+</header>
+
+<!-- ── LAYOUT ── -->
+<div class="layout">
+
+  <!-- ── SIDEBAR NAVIGATION ── -->
+  <nav class="sidebar">
+
+    <div class="nav-section">
+      <div class="nav-label">Performance</div>
+
+      <button class="nav-item active" onclick="showSheet('qualified-sales', this)">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Qualified Sales
+      </button>
+
+      <button class="nav-item" onclick="showSheet('revenue-trend', this)">
+        <svg viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+        Revenue Trend
+      </button>
+
+      <button class="nav-item" onclick="showSheet('projected-revenue', this)">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Projected Revenue
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Publications</div>
+
+      <button class="nav-item" onclick="showSheet('publications', this)">
+        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Publication Profit
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Sales</div>
+
+      <button class="nav-item" onclick="showSheet('sales-details', this)">
+        <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Sales Details
+      </button>
+
+      <button class="nav-item" onclick="showSheet('sales-activity', this)">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Sales Activity
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Renewals</div>
+
+      <button class="nav-item" onclick="showSheet('renewals-managed', this)">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Managed Clients
+        <span class="nav-badge">↻</span>
+      </button>
+
+      <button class="nav-item" onclick="showSheet('renewals-nonmanaged', this)">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Non-Managed Clients
+      </button>
+
+      <button class="nav-item" onclick="showSheet('hyport-expiring', this)">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Hyport Expiring
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">My Business</div>
+
+      <button class="nav-item" onclick="showSheet('top-clients', this)">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        My Top Clients
+      </button>
+
+      <button class="nav-item" onclick="showSheet('aging-summary', this)">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        Aging Summary
+      </button>
+
+      <button class="nav-item" onclick="showSheet('production-stats', this)">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Production Stats
+      </button>
+
+      <button class="nav-item" onclick="showSheet('personal-info', this)">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Personal Info
+      </button>
+    </div>
+
+  </nav>
+
+  <!-- ── MAIN PANELS ── -->
+  <main class="main">
+
+    <!-- Qualified Sales — sheet real -->
+    <div class="sheet-panel active" id="panel-qualified-sales">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="322b4559-8bda-49e8-9b41-ac15ae2edf2f"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Revenue Trend — reemplazar sheet-id cuando lo tengas -->
+    <div class="sheet-panel" id="panel-revenue-trend">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="8d1409d6-4a03-4c04-ad69-aa5c15c897d5"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Projected Revenue -->
+    <div class="sheet-panel" id="panel-projected-revenue">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="SHEET_ID_PROJECTED_REVENUE"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Publications -->
+    <div class="sheet-panel" id="panel-publications">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="SHEET_ID_PUBLICATIONS"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Sales Details -->
+    <div class="sheet-panel" id="panel-sales-details">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="SHEET_ID_SALES_DETAILS"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Sales Activity -->
+    <div class="sheet-panel" id="panel-sales-activity">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="SHEET_ID_SALES_ACTIVITY"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Renewals Managed -->
+    <div class="sheet-panel" id="panel-renewals-managed">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="SHEET_ID_RENEWALS_MANAGED"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Renewals Non-Managed -->
+    <div class="sheet-panel" id="panel-renewals-nonmanaged">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="SHEET_ID_RENEWALS_NONMANAGED"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Hyport Expiring -->
+    <div class="sheet-panel" id="panel-hyport-expiring">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="SHEET_ID_HYPORT_EXPIRING"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Top Clients -->
+    <div class="sheet-panel" id="panel-top-clients">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="SHEET_ID_TOP_CLIENTS"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Aging Summary -->
+    <div class="sheet-panel" id="panel-aging-summary">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="SHEET_ID_AGING_SUMMARY"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Production Stats -->
+    <div class="sheet-panel" id="panel-production-stats">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="SHEET_ID_PRODUCTION_STATS"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+    <!-- Personal Info -->
+    <div class="sheet-panel" id="panel-personal-info">
+      <qlik-embed
+        ui="analytics/sheet"
+        app-id="1746d9d5-faf3-44ca-a265-9dc8961ad8f2"
+        sheet-id="SHEET_ID_PERSONAL_INFO"
+        theme="Matrix"
+        iframe="true">
+      </qlik-embed>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toastMsg">Report request sent successfully.</span>
+</div>
+
+<script>
+  // ── NAVIGATION ──
+  function showSheet(sheetKey, btn) {
+    document.querySelectorAll('.sheet-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + sheetKey).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ── DOWNLOAD / AUTOMATION TRIGGER ──
+  // Reemplazar AUTOMATION_WEBHOOK_URL con la URL real de tu Qlik Automation
+  const AUTOMATION_WEBHOOK_URL = 'AUTOMATION_WEBHOOK_URL';
+
+  async function triggerDownload() {
+    const btn = document.getElementById('btnDownload');
+    btn.classList.add('loading');
+    btn.querySelector('span') && (btn.querySelector('span').textContent = 'Sending…');
+
+    try {
+      await fetch(AUTOMATION_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ triggered_from: 'ad-portal', timestamp: new Date().toISOString() })
+      });
+      showToast('Report request sent! You will receive it shortly.', false);
+    } catch (e) {
+      showToast('Could not send the request. Please try again.', true);
+    } finally {
+      btn.classList.remove('loading');
+    }
+  }
+
+  // ── TOAST ──
+  function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    t.className = 'toast' + (isError ? ' error' : '');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 4000);
+  }
+</script>
+
+</body>
+</html>
